@@ -19,7 +19,7 @@ class ExactHybridGP(ModeModule, GP, GPyTorchModel):
         self,
         train_x: Tensor,
         train_y: Tensor,
-        hysteresis_models: List[BaseHysteresis] or BaseHysteresis,
+        hysteresis_models: List[BaseHysteresis] | BaseHysteresis,
         **kwargs
     ):
         """
@@ -89,6 +89,10 @@ class ExactHybridGP(ModeModule, GP, GPyTorchModel):
         self.train_inputs = (train_x,)
 
         self.m_transform = Normalize(self.input_dim)
+        # Make sure the transformation have the same dtype
+        self.m_transform._to(train_x)
+        self.untrained_transform = Normalize(self.input_dim)
+        self.untrained_transform._to(train_x)
 
         # train outcome transform
         self.outcome_transform = Standardize(1)
@@ -124,7 +128,7 @@ class ExactHybridGP(ModeModule, GP, GPyTorchModel):
         m = self.get_magnetization(X, mode)
 
         # check to see if a normalization model has been trained
-        if not self.m_transform.equals(Normalize(self.input_dim)) or self.training:
+        if not self.m_transform.equals(self.untrained_transform) or self.training:
             return self.m_transform(m)
         else:
             return m
