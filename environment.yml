@@ -1,12 +1,9 @@
 # conda env create -f environment.yml
 name: diff_hysteresis
 channels:
-  - gpytorch
-  - pytorch
   - conda-forge
 dependencies:
-  - botorch==0.4.0
-  - gpytorch==1.5.0
+
   - ipykernel
   - ipywidgets
   - jupyterlab
@@ -14,8 +11,11 @@ dependencies:
   - numpy
   - pandas
   - pip
-  - python=3.9
-  - pytorch
+  - python=3.13
   - scipy
   - pip:
-    - pygmsh
+    - botorch==0.15.1
+    - gpytorch==1.14
+    - pygmsh>=7.1.17
+    - torch>=2.8.0
+    

@@ -1,17 +1,18 @@
-from typing import Any, Union, List
+from typing import Any, List, Union
 
 import torch
 from botorch.models import SingleTaskGP
+from botorch.models.gpytorch import GPyTorchModel
 from botorch.models.transforms import Normalize, Standardize
 from botorch.posteriors import GPyTorchPosterior
 from gpytorch.models import GP
 from torch import Tensor
 
-from hysteresis.base import HysteresisError, BaseHysteresis
-from hysteresis.modes import ModeModule, FITTING, NEXT
+from hysteresis.base import BaseHysteresis, HysteresisError
+from hysteresis.modes import FITTING, NEXT, ModeModule
 
 
-class ExactHybridGP(ModeModule, GP):
+class ExactHybridGP(ModeModule, GP, GPyTorchModel):
     num_outputs = 1
 
     def __init__(

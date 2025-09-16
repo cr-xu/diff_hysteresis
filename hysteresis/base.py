@@ -1,15 +1,16 @@
+import logging
+from typing import Callable, Dict
+
 import gpytorch.constraints
 import torch
-from torch.nn import Parameter
 from gpytorch import Module
 from torch import Tensor
-from typing import Dict, Callable
+from torch.nn import Parameter
+
 from .meshing import create_triangle_mesh
+from .modes import CURRENT, FITTING, FUTURE, NEXT, REGRESSION, ModeModule
 from .states import get_states, predict_batched_state
 from .transform import HysteresisTransform
-from .modes import ModeModule, REGRESSION, NEXT, FUTURE, FITTING, CURRENT
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +183,6 @@ class BaseHysteresis(Module, ModeModule):
                 self.polynomial_fit_iterations,
             )
 
-
         if isinstance(history_h, Tensor):
             history_h = history_h.to(**self.tkwargs)
             if len(history_h.shape) != 1:
@@ -234,7 +234,7 @@ class BaseHysteresis(Module, ModeModule):
         return self.scale * m.reshape(h.shape) + self.offset + h * self.slope
 
     def get_negative_saturation(self):
-        """ get negative saturation value of model """
+        """get negative saturation value of model"""
         return self.transformer.untransform(torch.zeros(1), -self.scale + self.offset)[
             1
         ].to(**self.tkwargs)
@@ -337,7 +337,8 @@ class BaseHysteresis(Module, ModeModule):
         ):
             raise HysteresisError(
                 f"Argument values are not inside valid domain ("
-                f"{list(self.valid_domain)}) for this model! Offending tensor is {values}"
+                f"{list(self.valid_domain)}) for this model!"
+                f"Offending tensor is {values}"
             )
 
     def reset_history(self):

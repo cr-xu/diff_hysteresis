@@ -20,7 +20,7 @@ def train_MSE(model: torch.nn.Module, train_x, train_y, n_steps, lr=0.1, atol=1.
         loss = torch.nn.MSELoss()(train_y, output)
         loss.backward()
 
-        loss_track += [loss]
+        loss_track += [loss.detach()]
         min_loss = torch.min(torch.tensor(loss_track))
         if min_loss < atol:
             break
