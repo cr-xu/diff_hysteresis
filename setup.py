@@ -2,8 +2,8 @@ from setuptools import setup
 
 setup(
     name="diff_hysteresis",
-    version="",
-    packages=["hysteresis", "hysteresis.tests", "torchAccelerator"],
+    version="0.1.0",
+    packages=["hysteresis", "hysteresis.tests", "hysteresis.torch_accelerator"],
     url="",
     license="",
     author="Ryan Roussel",

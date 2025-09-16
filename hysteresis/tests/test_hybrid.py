@@ -1,23 +1,23 @@
+import os
 from copy import deepcopy
 
 import gpytorch.distributions
 import pytest
 import torch
-from botorch import fit_gpytorch_model
+from botorch import fit_gpytorch_mll
 from botorch.acquisition import UpperConfidenceBound
 from botorch.optim import optimize_acqf
-from gpytorch.likelihoods import GaussianLikelihood
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
+import hysteresis
 from hysteresis.base import BaseHysteresis, HysteresisError
 from hysteresis.hybrid import ExactHybridGP
-import hysteresis
-import os
 
 
 def load():
     aps_model = torch.load(
-        os.path.join(hysteresis.__file__.split("__init__")[0], "tests", "aps_model.pt")
+        os.path.join(hysteresis.__file__.split("__init__")[0], "tests", "aps_model.pt"),
+        weights_only=False,
     )
 
     train_h = aps_model.history_h.reshape(-1, 1)
@@ -29,22 +29,22 @@ def load():
 
 class TestExactHybridGP:
     def test_init(self):
-        train_x, train_m, train_y = load()
+        train_x, _, train_y = load()
         H = BaseHysteresis(train_x.flatten())
-        pred_m = H(train_x.flatten(), return_real=True)
+        _ = H(train_x.flatten(), return_real=True)
 
-        model = ExactHybridGP(train_x, train_y.flatten(), H)
+        _ = ExactHybridGP(train_x, train_y.flatten(), H)
 
     def test_eval(self):
-        train_x, train_m, train_y = load()
+        train_x, _, train_y = load()
         H = BaseHysteresis(train_x.flatten(), polynomial_degree=3)
 
         model = ExactHybridGP(train_x, train_y.flatten(), H)
         with torch.no_grad():
-            post = model(train_x)
+            _ = model(train_x)
 
     def test_train_basic(self):
-        train_x, train_m, train_y = load()
+        train_x, _, train_y = load()
 
         # try with and without trainable H model
         for ele in [True, False]:
@@ -57,7 +57,7 @@ class TestExactHybridGP:
             value = mll(model(model.train_inputs[0]), model.train_targets)
             assert value.shape == torch.Size([])
 
-            fit_gpytorch_model(mll, options={"maxiter": 2})
+            fit_gpytorch_mll(mll, optimizer_kwargs={"options": {"maxiter": 2}})
 
         # train with random data inside bounds
         H = BaseHysteresis(train_x.flatten(), polynomial_degree=1)
@@ -69,7 +69,7 @@ class TestExactHybridGP:
         )
 
         mll = ExactMarginalLogLikelihood(model.gp.likelihood, model)
-        fit_gpytorch_model(mll, options={"maxiter": 2})
+        fit_gpytorch_mll(mll, optimizer_kwargs={"options": {"maxiter": 2}})
 
         # train multi dim with random data
         model = ExactHybridGP(
@@ -79,10 +79,10 @@ class TestExactHybridGP:
         )
 
         mll = ExactMarginalLogLikelihood(model.gp.likelihood, model)
-        fit_gpytorch_model(mll, options={"maxiter": 5})
+        fit_gpytorch_mll(mll, optimizer_kwargs={"options": {"maxiter": 5}})
 
     def test_predict(self):
-        train_x, train_m, train_y = load()
+        train_x, _, train_y = load()
         H = BaseHysteresis(train_x.flatten(), polynomial_degree=3)
         model = ExactHybridGP(train_x, train_y.flatten(), H)
 
@@ -93,15 +93,17 @@ class TestExactHybridGP:
             # evaluate on next data
             test_h = torch.rand(10).unsqueeze(-1).double() + min(train_x)
             model.next()
-            post = model(test_h, return_real=ele)
+            _ = model(test_h, return_real=ele)
 
             # evaluate on future data
             test_h = torch.rand(10).double() + min(train_x)
             model.future()
-            post = model(test_h.unsqueeze(1), return_real=ele)
+            _ = model(test_h.unsqueeze(1), return_real=ele)
 
     def test_botorch(self):
-        train_x, train_m, train_y = load()
+        train_x, _, train_y = load()
+        train_x = train_x.double()
+        train_y = train_y.double()
         H = BaseHysteresis(train_x.flatten(), polynomial_degree=1)
         model = ExactHybridGP(train_x, train_y.flatten(), H)
 
@@ -113,11 +115,11 @@ class TestExactHybridGP:
         model.next()
 
         # try to optimize
-        bounds = torch.tensor([min(train_x), max(train_x)]).reshape(2, 1)
-        candidate, _ = optimize_acqf(acq, bounds, 1, 1, 2)
+        bounds = torch.tensor([min(train_x), max(train_x)]).reshape(2, 1).double()
+        _, _ = optimize_acqf(acq, bounds, 1, 1, 2)
 
     def test_multiple_magents(self):
-        train_x, train_m, train_y = load()
+        train_x, _, train_y = load()
         H = BaseHysteresis(train_x.flatten())
 
         with pytest.raises(ValueError):
@@ -160,4 +162,4 @@ class TestExactHybridGP:
                 [min(train_x[0]), max(train_x[0])],
             ]
         ).reshape(2, 3)
-        candidate, _ = optimize_acqf(acq, bounds, 1, 1, 1)
+        _, _ = optimize_acqf(acq, bounds, 1, 1, 1)
